@@ -33,33 +33,23 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
     replier.reply(result.trim());
   }
 
+  if (cmd[0] == "/영화") {
+    var str = "[영화 순위] \n\n";
+    var data = org.jsoup.Jsoup.connect("https://ticket.maxmovie.com/reserve/movie").get().select(".tmplMovie > a") + "";
+    data = data.replace(/<[^>]+>/g, "");
+    data = data.split("\n");
+
+    for (var idx = 0; idx < 10; idx++) {
+      str += (idx + 1) + "위 : " + data[idx].trim() + "\n";
+    }
+    str = str.slice(0, -1);
+    replier.reply(str);
+  }
+  
+
 }
 
-function getNaverWeather(loc) {
-  try {
-    var url = Utils.parse("https://m.search.naver.com/search.naver?query=" + loc.replace(/ /g, "+") + "+날씨")
-      .select("a.csm_more").attr("href");
-    Log.i("url", url);
-    var data = Utils.parse(url).select("ul.week_list > li");
-    var result = [];
-    var days = ["오늘", "내일", "모래", "글피"];
-    for (var n = 0; n < days.length; n++) {
-      var info = data.get(n).select("span");
-      result[n] = "[" + days[n] + " 날씨]\n";
-      result[n] += "상태 : " + info.get(2).attr("data-wetr-txt") + " -> ";
-      result[n] += info.get(7).attr("data-wetr-txt") + "\n";
-      result[n] += "강수확률 : " + info.get(4).ownText() + " -> ";
-      result[n] += info.get(9).ownText() + "\n";
-      var tmp = data.get(n).select("strong.temperature").select("span");
-      tmp = (tmp.get(0).ownText() + " ~ " + tmp.get(3).ownText()).replace(/°/g, "℃");
-      result[n] += "온도 : " + tmp;
-      return result;
-    }
-  } catch (e) {
-    Log.error(loc + "날씨 정보 뜯어오기 실패\n" + e);
-    return null;
-  }
-}
+
 
 /************** 자동생성코드 **************/
 
