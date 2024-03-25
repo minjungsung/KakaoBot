@@ -4,22 +4,15 @@ const _cmdArr = ["명령어", "날씨", "질문"];
 
 
 function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
-  var cmd = msg.split(" ");
+  // Split the message into command and additional message parts
+  var parts = msg.split(" ");
+  var apiCommand = parts[0];
+  var additionalMsg = parts.slice(1).join(" ");
 
-  if (msg == "/날씨") {
-    var data = org.jsoup.Jsoup.connect("https://m.search.naver.com/search.naver?query=날씨").get();
-    data = data.select("div.lcl_lst").get(0);
-    data = data.select("a");
-    var result = [];
-    for (var n = 0; n < data.size(); n++) {
-      result[n] = data.get(n).text();
-    }
-    replier.reply("[전국 날씨 정보]\n\n" + result.join("\n").replace(/도씨/g, "℃"));
-  }
-
-  if (cmd[0] == "/맛집") {
-    cmd.shift();
-    var data = Utils.parse("https://m.map.kakao.com/actions/searchView?q=" + cmd.join("%20") + "%20맛집")
+  // Check the command and call sendRequestToApi accordingly
+  if (parts[0] == ".맛집") {
+    parts.shift();
+    var data = Utils.parse("https://m.map.kakao.com/actions/searchView?q=" + parts.join("%20") + "%20맛집")
       .select("li.search_item.base");
     var result = "[맛집 리스트]\n\n";
     for (var n = 0; n < data.size(); n++) {
@@ -31,22 +24,41 @@ function response(room, msg, sender, isGroupChat, replier, imageDB, packageName)
       result += "\n\n";
     }
     replier.reply(result.trim());
+  } else if (apiCommand[0] == ".") {
+    var apiUrl = "https://kakao-bot-api-ten.vercel.app/api/command";
+    sendRequestToApi(apiUrl, apiCommand, additionalMsg, replier, sender, room, isGroupChat);
+  } else {
+    var apiUrl = "https://kakao-bot-api-ten.vercel.app/api/chat";
+    sendRequestToApi(apiUrl, apiCommand, additionalMsg, replier, sender, room, isGroupChat);
+  }
+}
+
+function sendRequestToApi(apiUrl, apiCommand, additionalMsg, replier, sender, room, isGroupChat) {
+
+  if (additionalMsg === undefined) {
+    additionalMsg = '';
   }
 
-  if (cmd[0] == "/영화") {
-    var str = "[영화 순위] \n\n";
-    var data = org.jsoup.Jsoup.connect("https://ticket.maxmovie.com/reserve/movie").get().select(".tmplMovie > a") + "";
-    data = data.replace(/<[^>]+>/g, "");
-    data = data.split("\n");
-
-    for (var idx = 0; idx < 10; idx++) {
-      str += (idx + 1) + "위 : " + data[idx].trim() + "\n";
-    }
-    str = str.slice(0, -1);
-    replier.reply(str);
+  additionalMsg = additionalMsg.trim();
+  var fullMsg = apiCommand;
+  if (additionalMsg) {
+    fullMsg += " " + additionalMsg;
   }
-  
 
+  var apiUrlWithParams = apiUrl + "?msg=" + encodeURIComponent(fullMsg) +
+    "&sender=" + encodeURIComponent(sender) +
+    "&room=" + encodeURIComponent(room) +
+    "&isGroupChat=" + isGroupChat;
+
+  try {
+    var response = org.jsoup.Jsoup.connect(apiUrlWithParams)
+      .ignoreContentType(true)
+      .execute();
+    var data = response.body();
+    replier.reply(data);
+  } catch (error) {
+    replier.reply("Failed to process command: " + error.toString());
+  }
 }
 
 
